@@ -1,0 +1,135 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Setup: install backend deps",
+      "type": "shell",
+      "command": "python3 -m pip install -r backend/requirements.txt",
+      "windows": { "command": "python -m pip install -r backend\\requirements.txt" },
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Setup: install frontend deps",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "1. Generate balanced synthetic data",
+      "type": "shell",
+      "command": "python3 generate_synthetic_data.py",
+      "windows": { "command": "python generate_synthetic_data.py" },
+      "options": { "cwd": "${workspaceFolder}/data" },
+      "problemMatcher": []
+    },
+    {
+      "label": "2. Run EDA (class balance, correlation, leakage check)",
+      "type": "shell",
+      "command": "python3 eda.py",
+      "windows": { "command": "python eda.py" },
+      "options": { "cwd": "${workspaceFolder}/data" },
+      "dependsOn": ["1. Generate balanced synthetic data"],
+      "problemMatcher": []
+    },
+    {
+      "label": "3. Preprocess (clean, select features, split train/test)",
+      "type": "shell",
+      "command": "python3 preprocess.py",
+      "windows": { "command": "python preprocess.py" },
+      "options": { "cwd": "${workspaceFolder}/data" },
+      "dependsOn": ["2. Run EDA (class balance, correlation, leakage check)"],
+      "problemMatcher": []
+    },
+    {
+      "label": "4. Load data into DB",
+      "type": "shell",
+      "command": "python3 load_to_db.py",
+      "windows": { "command": "python load_to_db.py" },
+      "options": { "cwd": "${workspaceFolder}/data" },
+      "dependsOn": ["3. Preprocess (clean, select features, split train/test)"],
+      "problemMatcher": []
+    },
+    {
+      "label": "5. Train + evaluate risk models",
+      "type": "shell",
+      "command": "python3 evaluate.py",
+      "windows": { "command": "python evaluate.py" },
+      "options": { "cwd": "${workspaceFolder}/backend/risk_models" },
+      "dependsOn": ["4. Load data into DB"],
+      "problemMatcher": []
+    },
+    {
+      "label": "6. Run tests",
+      "type": "shell",
+      "command": "python3 -m pytest backend/tests -v",
+      "windows": { "command": "python -m pytest backend/tests -v" },
+      "options": { "cwd": "${workspaceFolder}" },
+      "dependsOn": ["5. Train + evaluate risk models"],
+      "problemMatcher": []
+    },
+    {
+      "label": "7. Adapt real Synthea data (external validation set)",
+      "type": "shell",
+      "command": "python3 adapt_real_synthea.py",
+      "windows": { "command": "python adapt_real_synthea.py" },
+      "options": { "cwd": "${workspaceFolder}/data/real_synthea" },
+      "problemMatcher": []
+    },
+    {
+      "label": "8. Validate models on real Synthea data",
+      "type": "shell",
+      "command": "python3 evaluate_real_synthea.py",
+      "windows": { "command": "python evaluate_real_synthea.py" },
+      "options": { "cwd": "${workspaceFolder}/backend/risk_models" },
+      "dependsOn": ["7. Adapt real Synthea data (external validation set)"],
+      "problemMatcher": []
+    },
+    {
+      "label": "9. Run backend API",
+      "type": "shell",
+      "command": "python3 -m uvicorn main:app --reload --port 8000",
+      "windows": { "command": "python -m uvicorn main:app --reload --port 8000" },
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "10. Run frontend dev server",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Full pipeline: data \u2192 EDA \u2192 preprocess \u2192 DB \u2192 train \u2192 evaluate \u2192 test",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "1. Generate balanced synthetic data",
+        "2. Run EDA (class balance, correlation, leakage check)",
+        "3. Preprocess (clean, select features, split train/test)",
+        "4. Load data into DB",
+        "5. Train + evaluate risk models",
+        "6. Run tests"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Full pipeline + real Synthea external validation",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Full pipeline: data \u2192 EDA \u2192 preprocess \u2192 DB \u2192 train \u2192 evaluate \u2192 test",
+        "7. Adapt real Synthea data (external validation set)",
+        "8. Validate models on real Synthea data"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run everything (backend + frontend)",
+      "dependsOn": ["9. Run backend API", "10. Run frontend dev server"],
+      "problemMatcher": []
+    }
+  ]
+}

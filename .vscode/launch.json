@@ -1,0 +1,51 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend: FastAPI (uvicorn)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--reload", "--port", "8000"],
+      "cwd": "${workspaceFolder}/backend",
+      "justMyCode": true
+    },
+    {
+      "name": "Data: generate synthetic data",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/data/generate_synthetic_data.py",
+      "cwd": "${workspaceFolder}/data",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Data: load to DB",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/data/load_to_db.py",
+      "cwd": "${workspaceFolder}/data",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Models: run evaluation",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/risk_models/evaluate.py",
+      "cwd": "${workspaceFolder}/backend/risk_models",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Frontend: Chrome (Vite dev server)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend/src"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run full stack (backend + frontend debug)",
+      "configurations": ["Backend: FastAPI (uvicorn)", "Frontend: Chrome (Vite dev server)"]
+    }
+  ]
+}

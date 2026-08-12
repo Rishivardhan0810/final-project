@@ -1,0 +1,29 @@
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# --- Node / frontend ---
+node_modules/
+frontend/dist/
+
+# --- Generated data & model artifacts (reproducible via data/generate_synthetic_data.py etc.) ---
+data/patients.csv
+data/medications.csv
+data/train.csv
+data/test.csv
+data/pharmacy.db
+data/eda_outputs/
+data/real_synthea/real_test.csv
+backend/risk_models/rf_model.joblib
+backend/risk_models/text_model.joblib
+backend/risk_models/evaluation_summary.json
+clinicalbert-addon/data/clinicalbert_export/
+
+# --- Local tooling / editor state ---
+.claude/settings.local.json
+.DS_Store
+Thumbs.db
