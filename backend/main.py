@@ -61,6 +61,13 @@ class AckRequest(BaseModel):
     risk_level: str
 
 
+class DispenseRequest(BaseModel):
+    patient_id: str
+    pharmacist_name: str
+    drug_name: str
+    dose_mg: float
+
+
 @app.post("/api/lookup")
 def lookup_patient(req: LookupRequest):
     """Name + DOB lookup -- one record at a time, per UK GDPR constraint noted in the plan."""
@@ -148,6 +155,31 @@ def acknowledge(req: AckRequest):
     conn.commit()
     conn.close()
     return {"status": "acknowledged"}
+
+
+@app.post("/api/dispense")
+def dispense(req: DispenseRequest):
+    """Called when the pharmacist actually hands over the medication -- the real
+    transaction record, distinct from (but usually preceded by) an
+    acknowledgement, since most prescriptions never trigger an alert at all.
+    Every dispense is logged with who did it, what was dispensed, for which
+    patient, and when."""
+    conn = get_conn()
+    # Link to the most recent acknowledgement for this patient, if any, so a
+    # dispense can be traced back to the alert that authorized it.
+    ack_row = conn.execute(
+        "SELECT ack_id FROM acknowledgements WHERE patient_id = ? ORDER BY ack_id DESC LIMIT 1",
+        (req.patient_id,),
+    ).fetchone()
+    conn.execute(
+        "INSERT INTO dispenses (patient_id, ack_id, pharmacist_name, drug_name, dose_mg, dispense_timestamp) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (req.patient_id, ack_row["ack_id"] if ack_row else None, req.pharmacist_name,
+         req.drug_name, req.dose_mg, datetime.now(timezone.utc).isoformat()),
+    )
+    conn.commit()
+    conn.close()
+    return {"status": "dispensed"}
 
 
 @app.get("/api/health")

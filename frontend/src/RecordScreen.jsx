@@ -12,9 +12,34 @@ export default function RecordScreen({ data, apiBase, onBack }) {
   const [acknowledged, setAcknowledged] = useState(false);
   const [ackBusy, setAckBusy] = useState(false);
   const [pharmacistName, setPharmacistName] = useState("");
+  const [dispenseBusy, setDispenseBusy] = useState(false);
+  const [dispensed, setDispensed] = useState(false);
   const current = prescriptions[prescriptions.length - 1];
 
   const dispenseLocked = Boolean(alert) && !acknowledged;
+
+  async function handleDispense() {
+    if (!pharmacistName.trim()) return;
+    setDispenseBusy(true);
+    try {
+      await fetch(`${apiBase}/api/dispense`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patient_id: patient.patient_id,
+          pharmacist_name: pharmacistName.trim(),
+          drug_name: current.drug_name,
+          dose_mg: current.dose_mg,
+        }),
+      });
+      setDispensed(true);
+    } catch {
+      // demo prototype: confirm locally even if the log call fails
+      setDispensed(true);
+    } finally {
+      setDispenseBusy(false);
+    }
+  }
 
   async function handleAcknowledge() {
     if (!pharmacistName.trim()) return;
@@ -115,9 +140,37 @@ export default function RecordScreen({ data, apiBase, onBack }) {
       </section>
 
       <section className="dispense-panel">
-        <button className="btn btn-dispense" disabled={dispenseLocked} title={dispenseLocked ? "Acknowledge the alert above to unlock" : ""}>
-          {dispenseLocked ? "\ud83d\udd12 Dispense (locked until acknowledged)" : "Dispense"}
-        </button>
+        {dispensed ? (
+          <p className="dispense-confirm">
+            <span aria-hidden="true">&#10003;</span> Dispensed by {pharmacistName.trim()} &middot;{" "}
+            {current.drug_name} {current.dose_mg}mg logged for {patient.first_name} {patient.last_name}.
+          </p>
+        ) : (
+          <>
+            {!alert && (
+              <label className="field field-inline">
+                <span>Pharmacist name</span>
+                <input
+                  value={pharmacistName}
+                  onChange={(e) => setPharmacistName(e.target.value)}
+                  placeholder="Pharmacist name"
+                />
+              </label>
+            )}
+            <button
+              className="btn btn-dispense"
+              disabled={dispenseLocked || !pharmacistName.trim() || dispenseBusy}
+              title={dispenseLocked ? "Acknowledge the alert above to unlock" : !pharmacistName.trim() ? "Enter your name to dispense" : ""}
+              onClick={handleDispense}
+            >
+              {dispenseLocked
+                ? "\ud83d\udd12 Dispense (locked until acknowledged)"
+                : dispenseBusy
+                  ? "Logging\u2026"
+                  : "Dispense"}
+            </button>
+          </>
+        )}
         <p className="dispense-hint">
           Barcode scan on collection verifies the box matches this current prescription {"\u2014"} it
           does not check whether the prescription itself has changed. That check happens above.

@@ -399,6 +399,13 @@ body {
   flex-wrap: wrap;
 }
 .dispense-hint { margin: 0; font-size: 12.5px; color: var(--ink-soft); max-width: 480px; }
+.dispense-confirm {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #146c4d;
+}
+.dispense-confirm span { color: var(--teal); }
 
 @media (max-width: 620px) {
   .app-main { padding: 20px 14px 48px; }

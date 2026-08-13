@@ -36,4 +36,18 @@ CREATE TABLE IF NOT EXISTS acknowledgements (
     risk_level      TEXT NOT NULL
 );
 
+-- The actual dispensing transaction -- separate from acknowledgements
+-- because not every dispense follows an alert (most prescriptions never
+-- change), but every dispense must still record who did it and for whom.
+CREATE TABLE IF NOT EXISTS dispenses (
+    dispense_id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    patient_id          TEXT NOT NULL REFERENCES patients(patient_id),
+    ack_id               INTEGER REFERENCES acknowledgements(ack_id), -- most recent acknowledgement for this patient at dispense time, if any
+    pharmacist_name      TEXT NOT NULL,
+    drug_name            TEXT NOT NULL,
+    dose_mg              REAL NOT NULL,
+    dispense_timestamp   TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_prescriptions_patient ON prescriptions(patient_id);
+CREATE INDEX IF NOT EXISTS idx_dispenses_patient ON dispenses(patient_id);
