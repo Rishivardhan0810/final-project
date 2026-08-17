@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS patients (
 );
 
 CREATE TABLE IF NOT EXISTS prescriptions (
-    prescription_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    prescription_id INTEGER PRIMARY KEY,
     patient_id      TEXT NOT NULL REFERENCES patients(patient_id),
     drug_name       TEXT NOT NULL,
     drug_class      TEXT,          -- therapeutic class, e.g. "Anticoagulant"
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS prescriptions (
 );
 
 CREATE TABLE IF NOT EXISTS acknowledgements (
-    ack_id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_id          INTEGER PRIMARY KEY,
     patient_id      TEXT NOT NULL REFERENCES patients(patient_id),
     pharmacist_name TEXT NOT NULL,
     ack_timestamp   TEXT NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS acknowledgements (
 -- because not every dispense follows an alert (most prescriptions never
 -- change), but every dispense must still record who did it and for whom.
 CREATE TABLE IF NOT EXISTS dispenses (
-    dispense_id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    dispense_id        INTEGER PRIMARY KEY,
     patient_id          TEXT NOT NULL REFERENCES patients(patient_id),
     ack_id               INTEGER REFERENCES acknowledgements(ack_id), -- most recent acknowledgement for this patient at dispense time, if any
     pharmacist_name      TEXT NOT NULL,
@@ -51,3 +51,31 @@ CREATE TABLE IF NOT EXISTS dispenses (
 
 CREATE INDEX IF NOT EXISTS idx_prescriptions_patient ON prescriptions(patient_id);
 CREATE INDEX IF NOT EXISTS idx_dispenses_patient ON dispenses(patient_id);
+
+-- Read-only, human-friendly view: acknowledgements and dispenses combined
+-- into one flat table with plain-English columns, so the pharmacy log can
+-- be understood at a glance without joining tables or reading IDs. Changes
+-- nothing about how the app writes data -- it's just an easier way to look.
+CREATE VIEW IF NOT EXISTS activity_log AS
+SELECT
+    'Acknowledged alert' AS action,
+    p.first_name || ' ' || p.last_name AS patient_name,
+    a.pharmacist_name,
+    NULL AS drug_name,
+    NULL AS dose_mg,
+    a.risk_level,
+    a.ack_timestamp AS happened_at
+FROM acknowledgements a
+JOIN patients p ON p.patient_id = a.patient_id
+UNION ALL
+SELECT
+    'Dispensed' AS action,
+    p.first_name || ' ' || p.last_name AS patient_name,
+    d.pharmacist_name,
+    d.drug_name,
+    d.dose_mg,
+    NULL AS risk_level,
+    d.dispense_timestamp AS happened_at
+FROM dispenses d
+JOIN patients p ON p.patient_id = d.patient_id
+ORDER BY happened_at DESC;
