@@ -1,3 +1,5 @@
+# PART OF: Backend -- Comparison Engine (the core logic that diffs a
+# patient's previous prescription against their current one)
 """
 Comparison engine v2: compares a patient's current EPS prescription
 against their most recent previous prescription and returns a

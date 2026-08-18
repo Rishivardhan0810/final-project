@@ -1,3 +1,5 @@
+# PART OF: Data Pipeline -- Data Generation (the very first step; makes
+# patients.csv and medications.csv that every other script builds on)
 """
 Synthetic patient prescription data generator -- v2.
 

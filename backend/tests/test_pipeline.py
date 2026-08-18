@@ -1,3 +1,4 @@
+# PART OF: Backend -- Automated Tests (run with: pytest backend/tests -v)
 """
 Tests covering:
   - comparison_engine correctness (unit tests on known inputs), including

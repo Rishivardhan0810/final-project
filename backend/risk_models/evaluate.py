@@ -1,3 +1,5 @@
+# PART OF: Backend -- Risk Models (trains + compares both classifiers
+# side by side; run this to produce the headline accuracy numbers)
 """
 Runs both classifiers on the identical, pre-split test.csv and prints a
 side-by-side comparison table. Assumes data/preprocess.py has already

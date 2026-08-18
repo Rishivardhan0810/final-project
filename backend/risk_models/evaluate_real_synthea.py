@@ -1,3 +1,5 @@
+# PART OF: Backend -- Risk Models (external validation against genuine
+# Synthea data, not the synthetic generator's output)
 """
 External validation: scores the Random Forest and text models (already
 trained on the balanced SYNTHETIC data) against data/real_synthea/real_test.csv

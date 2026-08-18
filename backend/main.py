@@ -1,3 +1,5 @@
+# PART OF: Backend -- API Server (the FastAPI app the frontend talks to;
+# ties together the database, the comparison engine, and both risk models)
 """
 FastAPI service: patient lookup, prescription comparison, risk scoring
 (Random Forest + text/ClinicalBERT-substitute), and acknowledgement

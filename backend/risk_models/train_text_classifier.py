@@ -1,3 +1,5 @@
+# PART OF: Backend -- Risk Models (trains the text/NLP classifier; the
+# other of the two models main.py loads at startup)
 """
 NLP risk classifier (ClinicalBERT substitute) -- trained on the SAME
 pre-split train.csv / test.csv as the Random Forest.

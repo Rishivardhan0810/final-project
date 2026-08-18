@@ -1,3 +1,4 @@
+// PART OF: Frontend -- Patient Record Screen (patient banner, prescription tables, and the Dispense button; calls /api/dispense)
 import { useState } from "react";
 import AlertPanel from "./AlertPanel";
 

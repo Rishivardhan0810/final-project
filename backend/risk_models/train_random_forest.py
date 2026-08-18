@@ -1,3 +1,5 @@
+# PART OF: Backend -- Risk Models (trains the structured-feature Random
+# Forest classifier; one of the two models main.py loads at startup)
 """
 Random Forest risk classifier -- trained on the pre-split, pre-cleaned
 train.csv / test.csv from data/preprocess.py.

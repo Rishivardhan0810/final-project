@@ -1,3 +1,4 @@
+// PART OF: Frontend -- App Shell (switches between the lookup screen and the patient record screen; calls the backend's /api/lookup)
 import { useState } from "react";
 import LookupScreen from "./LookupScreen";
 import RecordScreen from "./RecordScreen";

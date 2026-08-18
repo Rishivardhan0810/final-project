@@ -1,3 +1,5 @@
+# PART OF: Data Pipeline -- Real-World Validation Data (a separate,
+# optional step; adapts genuine Synthea output into an external test set)
 """
 Adapts REAL Synthea medications.csv (genuine Synthea v3+ output, not
 the Python-generated substitute) into prescription change-pairs

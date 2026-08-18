@@ -1,3 +1,4 @@
+// PART OF: Frontend -- Alert Panel (the risk-change card shown on the record screen; calls /api/acknowledge)
 const RISK_COPY = {
   HIGH: { label: "High risk", note: "Formula/formulation switch or large dose change on a narrow-therapeutic-index drug, or any drug switch on one." },
   MEDIUM: { label: "Medium risk", note: "Drug or formulation switch on a standard-margin drug, or a smaller dose change on a narrow-therapeutic-index drug." },

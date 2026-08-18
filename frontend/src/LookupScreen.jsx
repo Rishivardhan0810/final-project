@@ -1,3 +1,4 @@
+// PART OF: Frontend -- Patient Lookup Screen (the name + date-of-birth search form shown first)
 import { useState } from "react";
 
 export default function LookupScreen({ onLookup, loading, error }) {

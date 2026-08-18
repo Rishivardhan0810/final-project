@@ -1,3 +1,5 @@
+# PART OF: Data Pipeline -- Database Loader (builds pharmacy.db, the
+# file the running app actually reads from)
 """Load patients.csv / medications.csv into the SQLite database using schema.sql."""
 import csv
 import sqlite3

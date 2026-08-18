@@ -1,3 +1,5 @@
+# PART OF: Data Pipeline -- Exploratory Data Analysis (checks the data
+# generated in step 1 before anything is trained on it)
 """
 Exploratory Data Analysis -- run BEFORE any model training.
 

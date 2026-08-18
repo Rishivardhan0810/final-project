@@ -1,3 +1,5 @@
+# PART OF: Data Pipeline -- Preprocessing (cleans the data and produces
+# the fixed train.csv/test.csv that both risk models are trained on)
 """
 Preprocessing -- the step between EDA and training.
 

@@ -1,3 +1,5 @@
+-- PART OF: Data Pipeline -- Database Schema (defines every table and
+-- view in pharmacy.db; load_to_db.py runs this file to build the database)
 -- Prescription comparison system schema -- v2.
 -- Written as standard SQL (runs identically on SQLite here or PostgreSQL
 -- in production -- swap AUTOINCREMENT for SERIAL/IDENTITY if porting).
