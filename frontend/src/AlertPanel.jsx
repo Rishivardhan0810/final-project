@@ -1,4 +1,4 @@
-// PART OF: Frontend -- Alert Panel (the risk-change card shown on the record screen; calls /api/acknowledge)
+// The risk-change card on the record screen -- calls /api/acknowledge
 const RISK_COPY = {
   HIGH: { label: "High risk", note: "Formula/formulation switch or large dose change on a narrow-therapeutic-index drug, or any drug switch on one." },
   MEDIUM: { label: "Medium risk", note: "Drug or formulation switch on a standard-margin drug, or a smaller dose change on a narrow-therapeutic-index drug." },
@@ -70,10 +70,15 @@ export default function AlertPanel({
       )}
 
       <div className="alert-models">
-        <span>Random Forest: <strong>{alert.risk_random_forest}</strong></span>
-        <span>Text model: <strong>{alert.risk_text_model}</strong></span>
+        <span>Primary alert (rule-based): <strong>{alert.risk_rule}</strong></span>
+        <span>Structured comparison (Random Forest): <strong>{alert.risk_random_forest}</strong></span>
+        <span>Text comparison (Text model): <strong>{alert.risk_text_model}</strong></span>
         <span>GP: {alert.gp_name}</span>
       </div>
+      <p className="alert-model-hint">
+        Random Forest and the text model are shown for comparison only &mdash; they do not control
+        this alert or unlock dispensing.
+      </p>
 
       <div className="alert-ack-row">
         <label className="field field-inline">

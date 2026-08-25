@@ -1,15 +1,9 @@
-# PART OF: Backend -- Risk Models (trains the structured-feature Random
-# Forest classifier; one of the two models main.py loads at startup)
-"""
-Random Forest risk classifier -- trained on the pre-split, pre-cleaned
-train.csv / test.csv from data/preprocess.py.
-
-v2: now uses 6 pharmacology-aware features instead of 4 -- adds
-formulation_changed (immediate-release vs extended-release swaps) and
-narrow_therapeutic_index (does this drug have a small safety margin,
-e.g. warfarin/digoxin/levothyroxine). class_weight="balanced" remains
-the weighting criterion.
-"""
+# Part of the backend risk models -- trains the structured-feature
+# Random Forest classifier, one of the two comparison models main.py loads.
+"""Trains a Random Forest on the pre-split train.csv/test.csv from
+data/preprocess.py, using the 6 structured features (including
+formulation_changed and narrow_therapeutic_index). class_weight="balanced"
+since the classes are otherwise close to even by construction anyway."""
 import os
 import joblib
 import pandas as pd
@@ -23,7 +17,7 @@ TRAIN_PATH = os.path.join(HERE, "..", "..", "data", "train.csv")
 TEST_PATH = os.path.join(HERE, "..", "..", "data", "test.csv")
 MODEL_PATH = os.path.join(HERE, "rf_model.joblib")
 
-# Must match data/preprocess.py SELECTED_FEATURES.
+# must match SELECTED_FEATURES in data/preprocess.py
 FEATURES = ["drug_changed", "formulation_changed", "dose_changed",
             "dose_change_pct", "route_changed", "narrow_therapeutic_index"]
 LABEL = "risk_label"

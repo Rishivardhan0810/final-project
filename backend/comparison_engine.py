@@ -1,33 +1,26 @@
-# PART OF: Backend -- Comparison Engine (the core logic that diffs a
-# patient's previous prescription against their current one)
+# Part of the backend -- works out what actually changed between a
+# patient's last prescription and the new one.
 """
-Comparison engine v2: compares a patient's current EPS prescription
-against their most recent previous prescription and returns a
-structured, pharmacologically-aware change report.
+Compares a patient's current prescription against their previous one and
+builds a structured report of what changed.
 
-WHAT CHANGED FROM v1:
-- drug_changed now means the ACTIVE INGREDIENT changed (a real formula
-  change), not a brand/manufacturer swap.
-- formulation_changed captures immediate-release vs extended-release
-  switches of the SAME active ingredient -- a genuinely risk-relevant
-  change that v1 couldn't see at all.
-- manufacturer_changed is tracked separately and explicitly excluded
-  from risk scoring -- generated on purpose so the data can prove
-  packaging/company changes don't matter, rather than just asserting it.
-- narrow_therapeutic_index (NTI) is now part of the comparison: drugs
-  like warfarin, digoxin, levothyroxine, insulin, and lithium have a
-  small safety margin between an effective and a harmful dose, so the
-  same percentage dose change means more for these than for a
-  wide-margin drug like vitamin D.
-- concurrent_medications / polypharmacy_count give the pharmacist
-  fuller context (what else is this patient on?), matching real
-  clinical practice where a change is never judged in isolation.
+A few things worth knowing about how this works:
+- drug_changed only fires on a genuine ingredient change, not a brand
+  swap. Manufacturer changes are tracked separately and never affect
+  risk -- packaging/company isn't a formula change.
+- formulation_changed catches immediate- vs extended-release switches of
+  the same drug, which matter clinically even without an ingredient change.
+- narrow_therapeutic_index (NTI) drugs -- warfarin, digoxin,
+  levothyroxine, insulin, lithium -- have a much smaller margin between
+  an effective and a harmful dose, so the same percentage dose change is
+  treated as more serious for these than for something like vitamin D.
+- concurrent_medications / polypharmacy_count are just context shown to
+  the pharmacist alongside the alert; they don't feed into the risk score.
 
-NOTE ON SUBSTITUTION: the project plan specifies Spring Boot (Java).
-This sandbox has no network route to Maven Central, so the engine is
-implemented in Python instead. The REST contract (JSON in/out) is
-identical, so a real Spring Boot service could replace this file
-without changing the risk models or the React frontend.
+The project plan called for this to be a Spring Boot service, but this
+environment can't reach Maven Central, so it's Python/FastAPI here
+instead. Same JSON contract either way, so that's a swappable detail,
+not something the rest of the system depends on.
 """
 
 from dataclasses import dataclass, field
@@ -39,6 +32,20 @@ from typing import Optional
 # simple lookup here since the live app only needs the NTI flag, not
 # the full drug reference table.
 NTI_DRUGS = {"Warfarin", "Apixaban", "Digoxin", "Levothyroxine", "Insulin Glargine", "Lithium"}
+
+
+def is_narrow_therapeutic_index(drug_name: str) -> bool:
+    """Checks a drug name against the NTI list above. Case/whitespace
+    insensitive, and matches names that START WITH an NTI name followed by
+    a word boundary (so "Digoxin 250mcg" still matches). Not plain
+    substring matching -- that used to let a bare "Insulin" wrongly match
+    "Insulin Glargine" just because one contains the other."""
+    normalized = drug_name.strip().lower()
+    for nti in NTI_DRUGS:
+        nti_lower = nti.lower()
+        if normalized == nti_lower or normalized.startswith(nti_lower + " "):
+            return True
+    return False
 
 
 @dataclass
@@ -79,13 +86,12 @@ def compare_prescriptions(patient_id: str, previous: Prescription, current: Pres
     route_changed = previous.route != current.route
 
     narrow_therapeutic_index = (
-        previous.drug_name in NTI_DRUGS or current.drug_name in NTI_DRUGS
+        is_narrow_therapeutic_index(previous.drug_name) or is_narrow_therapeutic_index(current.drug_name)
     )
 
-    # change_types intentionally excludes manufacturer_changed -- a
-    # packaging/brand swap is tracked (see manufacturer_changed above,
-    # and it's still shown to the pharmacist) but does not, by itself,
-    # trigger an alert or contribute to risk scoring.
+    # manufacturer_changed is tracked and shown to the pharmacist but
+    # deliberately left out of change_types -- a packaging/brand swap on
+    # its own shouldn't trigger an alert.
     change_types = []
     if drug_changed:
         change_types.append("drug")
@@ -108,9 +114,7 @@ def compare_prescriptions(patient_id: str, previous: Prescription, current: Pres
     if route_changed:
         parts.append(f"route changed from {previous.route} to {current.route}")
     if manufacturer_changed and not parts:
-        # Only mention a manufacturer-only swap if nothing else changed,
-        # so the sentence is honest that it's the sole difference (and
-        # the models can learn this carries no extra risk signal).
+        # only worth a mention if it's literally the only difference
         parts.append(f"manufacturer changed from {previous.manufacturer} to {current.manufacturer} "
                       f"(same formula, no risk-relevant change)")
     magnitude_summary = "; ".join(parts) if parts else "no change detected"
@@ -129,6 +133,35 @@ def compare_prescriptions(patient_id: str, previous: Prescription, current: Pres
         current=current.__dict__,
         magnitude_summary=magnitude_summary,
     )
+
+
+def classify_risk(*, drug_changed: bool, formulation_changed: bool, dose_changed: bool,
+                   dose_change_pct: float, route_changed: bool,
+                   narrow_therapeutic_index: bool) -> str:
+    """The one risk rule used across the whole project -- main.py calls it
+    for the live alert, and both data-generation scripts call it to label
+    their datasets, so it can't quietly drift into three different
+    versions of "the same" logic. This is a transparent reference rule,
+    not a clinically validated scoring system.
+
+    Random Forest and the text model never feed into this -- they're
+    shown alongside it for comparison, nothing more.
+
+    Keyword-only args so a call site can't silently mix up the order."""
+    if not (drug_changed or formulation_changed or dose_changed or route_changed):
+        return "NONE"
+    if drug_changed:
+        return "HIGH" if narrow_therapeutic_index else "MEDIUM"
+    if formulation_changed:
+        return "HIGH" if narrow_therapeutic_index else "MEDIUM"
+    if dose_changed:
+        threshold = 0.25 if narrow_therapeutic_index else 0.50
+        if abs(dose_change_pct) >= threshold:
+            return "HIGH"
+        return "MEDIUM" if narrow_therapeutic_index else "LOW"
+    if route_changed:
+        return "LOW"
+    return "NONE"
 
 
 def natural_language_description(report: ChangeReport, condition: str, allergy: str,

@@ -1,51 +1,22 @@
-# PART OF: Data Pipeline -- Preprocessing (cleans the data and produces
-# the fixed train.csv/test.csv that both risk models are trained on)
+# Part of the data pipeline -- cleans the data and produces the fixed
+# train.csv/test.csv both risk models train on.
 """
-Preprocessing -- the step between EDA and training.
+The step between EDA and training: load medications.csv, clean/type-check
+it, pick which features to keep, then split into train/test once and
+save both to disk so every downstream model sees the exact same split.
 
-What it does, in order:
-  1. Load raw medications.csv
-  2. Clean / type-check (no missing values, correct dtypes)
-  3. Build the feature table
-  4. FEATURE SELECTION: keep 6 features, drop 2 (see reasoning below)
-  5. Split into train/test ONCE, save both to disk as separate files
+Feature selection (see data/eda_outputs/eda_report.txt for the numbers):
 
-Why this is a separate script from training: splitting here and saving
-train.csv/test.csv means every model (Random Forest, text classifier)
-is trained and evaluated on the exact same patients in the exact same
-roles. No script downstream ever re-splits or re-shuffles.
+Kept: drug_changed, formulation_changed, dose_changed, dose_change_pct,
+route_changed, narrow_therapeutic_index. Each carries real signal --
+risk_label is built directly from these -- and no pair is correlated
+above r=0.7, so they're not just duplicating each other.
 
-FEATURE SELECTION REASONING (from data/eda_outputs/eda_report.txt):
-
-Kept (6 features):
-  - drug_changed, formulation_changed, dose_changed, dose_change_pct,
-    route_changed: each carries real signal -- risk_label is a rule
-    built directly over these (see generate_synthetic_data.py), and
-    the correlation matrix shows no pair above r=0.7, so each
-    contributes information the others don't duplicate.
-  - narrow_therapeutic_index: pharmacologically grounded (real drugs
-    like warfarin/digoxin/levothyroxine have a genuinely smaller safety
-    margin), and it's what makes the risk thresholds scale by drug
-    rather than applying one flat rule to everything.
-
-Dropped (2 features) -- and this time the evidence for dropping them
-is the whole point, not an afterthought:
-  - manufacturer_changed: single-feature purity 0.58, well below the
-    other structured features (drug_changed/formulation_changed/
-    route_changed all sit at 0.72-0.87). This was generated
-    DELIBERATELY as a control feature -- a manufacturer/brand swap of
-    an identical formula is a packaging change, not a formula change,
-    and risk_label's rule never uses it. Its middling purity is
-    residual correlation from co-occurring with dose changes in the
-    generator, not a genuine independent signal. Dropping it is the
-    direct, evidenced answer to "focus on formula changes, not
-    companies/packaging."
-  - polypharmacy_count: single-feature purity 0.30, barely above the
-    0.25 baseline you'd expect from random guessing across 4 classes.
-    It's shown to the pharmacist for context (see
-    concurrent_medications in the alert) but doesn't drive the risk
-    score -- the data confirms it shouldn't, at least not as a simple
-    count on its own.
+Dropped: manufacturer_changed (purity 0.58, well below the other
+features at 0.72-0.87 -- it's a packaging/brand swap, not a formula
+change, and risk_label never uses it) and polypharmacy_count (purity
+0.30, barely above the 0.25 you'd expect from guessing across 4
+classes -- useful context for the pharmacist, not a risk signal).
 """
 import os
 import pandas as pd
@@ -68,10 +39,9 @@ TEXT_COLS = ["condition", "allergy", "previous_drug", "previous_class", "previou
 
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
-    # concurrent_medications is legitimately allowed to be empty (a
-    # patient can have zero concurrent medications) -- fill it before
-    # the missing-value check below, so those rows aren't wrongly
-    # treated as having missing data.
+    # concurrent_medications can genuinely be empty (zero concurrent
+    # meds) -- fill it first so those rows don't fail the missing-value
+    # check below
     df["concurrent_medications"] = df["concurrent_medications"].fillna("")
 
     before = len(df)

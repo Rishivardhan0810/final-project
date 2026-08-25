@@ -1,14 +1,10 @@
-# PART OF: Backend -- Risk Models (trains the text/NLP classifier; the
-# other of the two models main.py loads at startup)
-"""
-NLP risk classifier (ClinicalBERT substitute) -- trained on the SAME
-pre-split train.csv / test.csv as the Random Forest.
-
-v2: sentences now include formulation changes and concurrent
-medications (polypharmacy context), matching the richer comparison
-engine. class_weight="balanced" on the Logistic Regression head is the
-weighting criterion for this model.
-"""
+# Part of the backend risk models -- trains the text/NLP classifier,
+# the other model main.py loads alongside Random Forest.
+"""TF-IDF + Logistic Regression text classifier (standing in for a real
+ClinicalBERT fine-tune, since this environment has no route to
+huggingface.co). Trained on the same train.csv/test.csv split as the
+Random Forest, just fed as natural-language sentences instead of
+structured columns."""
 import os
 import sys
 import joblib

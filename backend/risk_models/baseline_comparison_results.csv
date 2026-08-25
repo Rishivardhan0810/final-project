@@ -1,0 +1,6 @@
+model,accuracy,macro_precision,macro_recall,macro_f1,weighted_f1,under_risked,over_risked
+1. Deterministic reference rule,1.0,1.0,1.0,1.0,1.0,0,0
+2. Logistic Regression,0.96,0.9659,0.9596,0.9603,0.9602,0,6
+3. Decision Tree (single),1.0,1.0,1.0,1.0,1.0,0,0
+"4. Random Forest (existing saved model -- loaded, not retrained)",1.0,1.0,1.0,1.0,1.0,0,0
+"5. Text model (existing saved TF-IDF + LogReg -- loaded, not retrained)",0.94,0.9432,0.9403,0.9407,0.9402,5,4

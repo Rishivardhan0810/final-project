@@ -1,4 +1,4 @@
-// PART OF: Frontend -- App Entry Point (mounts the React app into the page; you won't need to edit this file)
+// Entry point -- mounts the React app into the page
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";

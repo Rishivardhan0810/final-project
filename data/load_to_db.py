@@ -1,6 +1,6 @@
-# PART OF: Data Pipeline -- Database Loader (builds pharmacy.db, the
-# file the running app actually reads from)
-"""Load patients.csv / medications.csv into the SQLite database using schema.sql."""
+# Part of the data pipeline -- builds pharmacy.db, the file the running
+# app actually reads from.
+"""Loads patients.csv / medications.csv into SQLite using schema.sql."""
 import csv
 import sqlite3
 import os
@@ -16,9 +16,9 @@ def main():
     with open(os.path.join(HERE, "schema.sql")) as f:
         conn.executescript(f.read())
 
-    # condition / concurrent_medications / polypharmacy_count live in
-    # medications.csv (per prescription-pair), not patients.csv -- pull
-    # them from the first matching row per patient when loading.
+    # condition/concurrent_medications/polypharmacy_count live in
+    # medications.csv, not patients.csv -- grab them from the first
+    # matching row per patient
     med_context = {}
     with open(os.path.join(HERE, "medications.csv")) as f:
         for row in csv.DictReader(f):
@@ -61,6 +61,34 @@ def main():
                  row["current_formulation"], row["current_manufacturer"], row["current_route"],
                  row["current_start_date"], row["current_prescriber"]),
             )
+
+    # Optional demo fixture -- one patient, one prescription, for
+    # demonstrating the first-prescription review workflow. Never touches
+    # medications.csv, so it can't affect the ML dataset. Skipped quietly
+    # if generate_demo_patient.py hasn't been run yet.
+    demo_path = os.path.join(HERE, "demo_patient.csv")
+    if os.path.exists(demo_path):
+        with open(demo_path) as f:
+            for row in csv.DictReader(f):
+                conn.execute(
+                    "INSERT INTO patients (patient_id, first_name, last_name, date_of_birth, "
+                    "condition, allergy, gp_name, concurrent_medications, polypharmacy_count) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (row["patient_id"], row["first_name"], row["last_name"], row["date_of_birth"],
+                     row["condition"], row["allergy"], row["gp_name"],
+                     row["concurrent_medications"], int(row["polypharmacy_count"])),
+                )
+                conn.execute(
+                    "INSERT INTO prescriptions (patient_id, drug_name, drug_class, dose_mg, "
+                    "formulation, manufacturer, route, start_date, prescriber, is_current) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
+                    (row["patient_id"], row["drug_name"], row["drug_class"], float(row["dose_mg"]),
+                     row["formulation"], row["manufacturer"], row["route"], row["start_date"],
+                     row["prescriber"]),
+                )
+        print(f"Loaded 1 demo patient (first-prescription case) from {demo_path}")
+    else:
+        print("Demo first-prescription fixture not found; skipping.")
 
     conn.commit()
 

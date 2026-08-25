@@ -1,13 +1,6 @@
-# PART OF: Backend -- Automated Tests (run with: pytest backend/tests -v)
-"""
-Tests covering:
-  - comparison_engine correctness (unit tests on known inputs), including
-    the new formulation and narrow-therapeutic-index logic
-  - dataset integrity: balance, no missing values, no leakage between
-    train/test, no patient overlap
-
-Run with: pytest backend/tests -v
-"""
+# Automated tests -- run with: pytest backend/tests -v
+"""Comparison-engine correctness (formulation/NTI logic included) plus
+dataset integrity: balance, missing values, train/test leakage."""
 import os
 import sys
 import pandas as pd
@@ -92,14 +85,38 @@ def test_narrow_therapeutic_index_flagged_correctly():
     assert not report2.narrow_therapeutic_index
 
 
+def test_nti_detection_is_case_insensitive():
+    """The shared NTI matcher must not depend on exact capitalisation --
+    real-world drug names won't always arrive capitalised like the
+    synthetic generator's reference table."""
+    prev = Prescription("warfarin", 5, "Standard", "Teva", "Oral", "2026-01-01", "Dr A")
+    cur = Prescription("WARFARIN", 3, "Standard", "Teva", "Oral", "2026-02-01", "Dr A")
+    report = compare_prescriptions("p9", prev, cur)
+    assert report.narrow_therapeutic_index
+
+
+def test_nti_detection_rejects_false_substring_match():
+    """A plain 'Insulin' entry shouldn't be flagged NTI just because
+    'insulin' is a substring of 'Insulin Glargine'."""
+    prev = Prescription("Insulin", 10, "Standard", "Teva", "Subcutaneous", "2026-01-01", "Dr A")
+    cur = Prescription("Insulin", 12, "Standard", "Teva", "Subcutaneous", "2026-02-01", "Dr A")
+    report = compare_prescriptions("p10", prev, cur)
+    assert not report.narrow_therapeutic_index
+
+
+def test_comparison_engine_and_real_data_adapter_share_one_nti_function():
+    """Both call sites should resolve to the same function object, not two
+    copies that happen to agree today but could drift apart later."""
+    from comparison_engine import is_narrow_therapeutic_index as engine_fn
+    sys.path.insert(0, os.path.join(DATA_DIR, "real_synthea"))
+    import adapt_real_synthea
+    assert adapt_real_synthea.is_narrow_therapeutic_index is engine_fn
+
+
 def test_drug_switch_risk_scales_with_nti_not_uniformly_high():
-    """The core 'think like a scientist' requirement: a drug switch is
-    only informative about risk when combined with whether an NTI drug
-    is involved. Two switches with identical structural features
-    (drug_changed=True, same dose/route/formulation) but different NTI
-    status must NOT both score the same. This directly guards against
-    the bug found in an earlier draft dataset where every drug switch
-    was scored HIGH regardless of NTI status."""
+    """A drug switch shouldn't score the same regardless of whether an
+    NTI drug is involved -- guards against an earlier bug where every
+    switch scored HIGH no matter what."""
     import pandas as pd
     raw_path = os.path.join(DATA_DIR, "medications.csv")
     if not os.path.exists(raw_path):
@@ -161,17 +178,15 @@ def test_all_four_classes_present(raw_data):
 
 
 def test_at_least_two_therapeutic_classes_and_one_nti_drug_present(raw_data):
-    """Sanity check that the richer drug reference table actually made
-    it into the generated data, not just the code."""
+    """Sanity check that the drug reference table actually made it into
+    the generated data, not just the code."""
     assert raw_data["previous_class"].nunique() >= 2
     assert raw_data["narrow_therapeutic_index"].any()
 
 
 def test_manufacturer_changes_exist_but_dont_drive_risk_alone(raw_data):
-    """Confirms manufacturer-only swaps are actually generated (so the
-    'focus on formula not packaging' claim has real data behind it) and
-    that a manufacturer-only change (nothing else different) is scored
-    NONE, not a false alarm."""
+    """Manufacturer-only swaps should actually exist in the data, and
+    should score NONE rather than a false alarm."""
     mfr_only = raw_data[
         raw_data["manufacturer_changed"]
         & ~raw_data["drug_changed"] & ~raw_data["formulation_changed"]
@@ -194,8 +209,7 @@ def test_all_classes_present_in_both_splits(train_test):
 
 
 def test_no_class_missing_or_tiny_in_either_split(train_test):
-    """Guards against the '20 vs 80' scenario -- every class must have a
-    reasonable minimum count in both train and test."""
+    """Every class needs a reasonable minimum count in both train and test."""
     train_df, test_df = train_test
     for split_name, df in [("train", train_df), ("test", test_df)]:
         counts = df["risk_label"].value_counts()

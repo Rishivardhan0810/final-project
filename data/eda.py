@@ -1,25 +1,19 @@
-# PART OF: Data Pipeline -- Exploratory Data Analysis (checks the data
-# generated in step 1 before anything is trained on it)
+# Part of the data pipeline -- exploratory analysis, runs before
+# anything gets trained on the data.
 """
-Exploratory Data Analysis -- run BEFORE any model training.
+EDA over the generated dataset: drug_changed, formulation_changed,
+manufacturer_changed, dose_changed, dose_change_pct, route_changed,
+narrow_therapeutic_index, polypharmacy_count. Two of these
+(manufacturer_changed, polypharmacy_count) are deliberately not part of
+the risk rule, so this can check whether they actually contribute
+anything rather than just assuming they don't.
 
-v2: covers the richer feature set from the pharmacology-aware
-generator -- drug_changed, formulation_changed, manufacturer_changed,
-dose_changed, dose_change_pct, route_changed, narrow_therapeutic_index,
-polypharmacy_count. Two of these (manufacturer_changed,
-polypharmacy_count) were deliberately generated as NOT part of the
-risk-labelling rule, specifically so this analysis can show evidence
-they don't matter, rather than the project just asserting it.
+Writes to data/eda_outputs/: class_balance.png, correlation_heatmap.png,
+feature_distributions.png, and eda_report.txt (balance check,
+correlation matrix, single-feature leakage check).
 
-Produces (into data/eda_outputs/):
-  - class_balance.png     bar chart of risk_label counts
-  - correlation_heatmap.png   correlation matrix between all structured features
-  - feature_distributions.png box plots of each feature, split by class
-  - eda_report.txt        plain-text summary: balance check, correlations,
-                           and a leakage check
-
-This is a diagnostic step, not a modeling step: nothing here fits on
-data or learns parameters, so running it can't itself introduce leakage.
+Purely diagnostic -- nothing here fits on the data or learns anything,
+so running it can't introduce leakage on its own.
 """
 import os
 import pandas as pd
@@ -123,14 +117,12 @@ def main():
         report_lines.append(f"  {col:26s} max single-value class purity = {max_purity:.2f}{flag}")
     report_lines.append("")
     report_lines.append(
-        "NOTE: manufacturer_changed and polypharmacy_count were generated DELIBERATELY as "
-        "control features -- the risk_label rule in data/generate_synthetic_data.py never uses "
-        "them (a manufacturer swap is packaging/company, not a formula change; concurrent "
-        "medication count is shown to the pharmacist for context but isn't part of the scoring "
-        "rule). If their purity/correlation numbers above are low, that's the evidence "
-        "confirming the 'focus on formula, not packaging' decision was correct -- not just an "
-        "assumption. drug_changed and dose_change_pct remain the strongest signals because "
-        "risk_label is a rule built directly over them."
+        "Note: manufacturer_changed and polypharmacy_count are deliberate control features -- "
+        "the risk_label rule never uses either of them (a manufacturer swap is packaging, not "
+        "a formula change; concurrent medication count is shown for context only). Low purity/"
+        "correlation numbers above back up that decision rather than just assuming it. "
+        "drug_changed and dose_change_pct remain the strongest signals because risk_label is "
+        "built directly from them."
     )
 
     with open(os.path.join(OUT_DIR, "eda_report.txt"), "w") as f:

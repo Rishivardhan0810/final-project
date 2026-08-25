@@ -1,28 +1,24 @@
-# PART OF: Data Pipeline -- Real-World Validation Data (a separate,
-# optional step; adapts genuine Synthea output into an external test set)
+# Part of the data pipeline -- a separate, optional step that adapts
+# genuine Synthea output into an external test set.
 """
-Adapts REAL Synthea medications.csv (genuine Synthea v3+ output, not
-the Python-generated substitute) into prescription change-pairs
-matching this project's v2 schema, so the already-trained models can
-be evaluated against genuine synthetic clinical data.
+Turns real Synthea medications.csv (genuine Synthea v3+ output, not the
+Python-generated substitute) into prescription change-pairs matching
+this project's schema, so the trained models can be checked against
+real clinical-shaped data.
 
-WHAT'S DIFFERENT IN v2:
-  - formulation is extracted from the free-text DESCRIPTION (looking
-    for "Extended Release" / "ER" / "XR" markers) rather than assumed
-    "Standard" for everything.
-  - narrow_therapeutic_index is looked up from the same NTI drug list
-    the live app uses (backend/comparison_engine.py), matched against
-    the extracted drug name.
-  - manufacturer: real Synthea's medications.csv has no manufacturer
-    field at all, so manufacturer_changed is always False here (marked
-    "not available in source data", not silently assumed unchanged).
-    This is an honest gap in the real dataset, not a design choice.
-  - risk_label is recomputed with the same pharmacology-scaled rule as
-    the synthetic generator (thresholds vary by narrow_therapeutic_index).
+A few notes on how the extraction works:
+- formulation is pulled from the free-text DESCRIPTION (looking for
+  "Extended Release"/"ER"/"XR" markers) rather than assumed "Standard".
+- narrow_therapeutic_index calls the same is_narrow_therapeutic_index()
+  the live app uses, not a separate copy.
+- manufacturer isn't in real Synthea's medications.csv at all, so
+  manufacturer_changed is always False here -- an honest gap in the
+  source data, not an assumption.
+- risk_label uses the same rule as the synthetic generator.
 
-Why this remains a separate, external evaluation set and NOT added to
-training data: only ~30 genuine same-condition change pairs across 104
-patients -- too few and too skewed toward drug switches to train on.
+This stays a separate external validation set rather than training
+data because there are only ~30 genuine same-condition change pairs
+across 104 patients -- too few, and too skewed toward drug switches.
 """
 import csv
 import os
@@ -35,7 +31,7 @@ RAW_PATH = os.path.join(HERE, "medications_raw.csv")
 OUT_PATH = os.path.join(HERE, "real_test.csv")
 
 sys.path.insert(0, os.path.join(HERE, "..", "..", "backend"))
-from comparison_engine import NTI_DRUGS  # noqa: E402 -- single source of truth for NTI status
+from comparison_engine import is_narrow_therapeutic_index, classify_risk  # noqa: E402
 
 ROUTE_KEYWORDS = [
     ("Auto-Injector", "Injection"),
@@ -78,9 +74,8 @@ def extract_formulation(desc):
 
 
 def extract_dose(desc):
-    """First 'NUMBER MG' occurrence in the description. A proxy, not an
-    exact structured dose -- combination drugs will only capture the
-    first value."""
+    """First 'NUMBER MG' occurrence in the description -- a proxy, not an
+    exact dose, so combination drugs only get the first value."""
     matches = re.findall(r"(\d+\.?\d*)\s*MG\b", desc, re.IGNORECASE)
     return float(matches[0]) if matches else None
 
@@ -88,28 +83,6 @@ def extract_dose(desc):
 def extract_drug_name(desc):
     m = re.match(r"^([A-Za-z][A-Za-z\-]*(?:\s[A-Za-z][A-Za-z\-]*)?)", desc)
     return (m.group(1).strip() if m else desc.split(" ")[0]).lower()
-
-
-def is_narrow_therapeutic_index(drug_name_lower):
-    return any(nti.lower() in drug_name_lower or drug_name_lower in nti.lower() for nti in NTI_DRUGS)
-
-
-def risk_label_for(drug_changed, formulation_changed, dose_changed, dose_change_pct,
-                    route_changed, narrow_therapeutic_index):
-    if not (drug_changed or formulation_changed or dose_changed or route_changed):
-        return "NONE"
-    if drug_changed:
-        return "HIGH" if narrow_therapeutic_index else "MEDIUM"
-    if formulation_changed:
-        return "HIGH" if narrow_therapeutic_index else "MEDIUM"
-    if dose_changed:
-        threshold = 0.25 if narrow_therapeutic_index else 0.50
-        if abs(dose_change_pct) >= threshold:
-            return "HIGH"
-        return "MEDIUM" if narrow_therapeutic_index else "LOW"
-    if route_changed:
-        return "LOW"
-    return "NONE"
 
 
 def main():
@@ -170,8 +143,14 @@ def main():
             "dose_changed": dose_changed,
             "dose_change_pct": round(dose_change_pct, 3),
             "narrow_therapeutic_index": narrow_therapeutic_index,
-            "risk_label": risk_label_for(drug_changed, formulation_changed, dose_changed,
-                                          dose_change_pct, route_changed, narrow_therapeutic_index),
+            "risk_label": classify_risk(
+                drug_changed=drug_changed,
+                formulation_changed=formulation_changed,
+                dose_changed=dose_changed,
+                dose_change_pct=dose_change_pct,
+                route_changed=route_changed,
+                narrow_therapeutic_index=narrow_therapeutic_index,
+            ),
         })
 
     if not pairs:
@@ -191,10 +170,10 @@ def main():
     print(f"Pairs involving a narrow-therapeutic-index drug: {nti_count}/{len(pairs)}")
     print(f"Saved -> {OUT_PATH}")
     print(
-        "\nNOTE: manufacturer_changed is always False here -- real Synthea's medications.csv has "
-        "no manufacturer field at all, so this is an honest gap in the source data, not an "
-        "assumption. This is used as an EXTERNAL VALIDATION set for the already-trained models, "
-        "not for training. See backend/risk_models/evaluate_real_synthea.py."
+        "\nNote: manufacturer_changed is always False here since real Synthea's medications.csv "
+        "has no manufacturer field -- a gap in the source data, not an assumption. This file is "
+        "an external validation set for the already-trained models, not training data. See "
+        "backend/risk_models/evaluate_real_synthea.py."
     )
 
 

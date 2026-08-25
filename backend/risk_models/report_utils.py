@@ -1,8 +1,6 @@
-# PART OF: Backend -- Risk Models (shared helper used by the training
-# and evaluation scripts, not run on its own)
-"""Shared print helpers so the Random Forest and text model report results
-the same way -- avoids repeating the same metrics/format block in both
-training scripts and the real-Synthea validation script."""
+# Part of the backend risk models -- shared helper, not run on its own.
+"""Print helpers so the Random Forest and text model report results the
+same way, instead of repeating the same formatting in every script."""
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 

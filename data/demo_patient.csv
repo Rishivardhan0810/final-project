@@ -1,0 +1,2 @@
+patient_id,first_name,last_name,date_of_birth,condition,allergy,gp_name,concurrent_medications,polypharmacy_count,drug_name,drug_class,dose_mg,formulation,manufacturer,route,start_date,prescriber
+demo0001,Arjun,Mehta,1980-01-01,Hypertension,None recorded,Dr A. Okafor,,0,Amlodipine,Calcium channel blocker,5,Standard,Teva,Oral,2026-01-01,Dr A. Okafor

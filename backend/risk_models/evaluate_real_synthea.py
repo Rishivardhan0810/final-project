@@ -1,15 +1,9 @@
-# PART OF: Backend -- Risk Models (external validation against genuine
-# Synthea data, not the synthetic generator's output)
-"""
-External validation: scores the Random Forest and text models (already
-trained on the balanced SYNTHETIC data) against data/real_synthea/real_test.csv
--- genuine Synthea output, adapted by data/real_synthea/adapt_real_synthea.py.
-
-This is deliberately NOT a re-train/re-split step. The models never see
-this data during training; this answers "how well does a model trained
-on balanced synthetic data generalise to genuine synthetic clinical
-records it has never seen in any form?"
-"""
+# Part of the backend risk models -- external validation against
+# genuine Synthea data, separate from the synthetic generator's output.
+"""Scores the already-trained Random Forest and text models against
+data/real_synthea/real_test.csv (genuine Synthea output the models have
+never seen). Not a retrain or re-split -- just answers "how well does a
+model trained on synthetic data generalise to real records?"."""
 import os
 import sys
 import joblib
@@ -83,14 +77,12 @@ def main():
     print(confusion_matrix(y_true, text_pred, labels=labels_present))
 
     print(
-        "\nNOTE: unlike the earlier version of this dataset (which happened to be 100% HIGH-risk "
-        "drug switches), the pharmacology-scaled risk rule now spreads real validation pairs "
-        "across MEDIUM and HIGH -- none of the real drug switches captured here involved a "
-        "narrow-therapeutic-index drug, so they score MEDIUM rather than HIGH. This gives "
-        "broader real-world evidence than before, but still no real LOW/NONE cases -- the "
-        "synthetic balanced test set (evaluate.py) remains the only source of evidence for those "
-        "two classes. manufacturer_changed is always False here since real Synthea's "
-        "medications.csv has no manufacturer field."
+        "\nNote: the pharmacology-scaled rule spreads these real validation pairs across "
+        "MEDIUM and HIGH -- none of the drug switches captured here involve a "
+        "narrow-therapeutic-index drug, so they land on MEDIUM rather than HIGH. There are "
+        "still no real LOW/NONE cases in this sample -- the synthetic test set (evaluate.py) "
+        "remains the only evidence for those two classes. manufacturer_changed is always "
+        "False here since real Synthea's medications.csv has no manufacturer field at all."
     )
 
 

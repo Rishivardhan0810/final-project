@@ -1,4 +1,4 @@
-/* PART OF: Frontend -- Styles (every visual style for the whole app lives in this one file) */
+/* All visual styles for the app live in this one file */
 :root {
   --ink: #10233b;
   --ink-soft: #4c6178;
@@ -60,6 +60,28 @@ body {
 .topbar-meta {
   color: #b9d2e8;
   font-size: 12.5px;
+}
+
+.topbar-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.topbar-nav-link {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b9d2e8;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.topbar-nav-link:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+.topbar-nav-link-active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .app-main {
@@ -224,6 +246,32 @@ body {
 }
 .tag-warn { background: var(--amber-tint); color: var(--amber); }
 
+/* ---- Concurrent medications (neutral/informational, not a risk alert) ---- */
+.concurrent-meds-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: var(--radius);
+  padding: 18px 24px;
+}
+.concurrent-meds-panel h2 { margin: 0 0 10px; font-size: 15px; }
+.concurrent-meds-list {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.concurrent-meds-list li { margin-bottom: 4px; }
+.concurrent-meds-empty { margin: 0 0 12px; font-size: 13.5px; color: var(--ink-soft); }
+.concurrent-meds-note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  background: var(--canvas);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
 /* ---- Alert panel ---- */
 .alert-panel {
   border-radius: var(--radius);
@@ -333,7 +381,14 @@ body {
   flex-wrap: wrap;
   font-size: 12.5px;
   color: var(--ink-soft);
-  margin-bottom: 16px;
+  margin-bottom: 4px;
+}
+
+.alert-model-hint {
+  margin: 0 0 16px;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  font-style: italic;
 }
 
 .alert-ack-row {
@@ -361,6 +416,47 @@ body {
 }
 .alert-resolved-title { margin: 0; font-weight: 700; color: #146c4d; }
 .alert-resolved-sub { margin: 2px 0 0; font-size: 13px; color: var(--ink-soft); }
+
+/* ---- First-prescription review panel (no history to compare against) ---- */
+.first-rx-panel {
+  background: var(--amber-tint);
+  border: 2px solid var(--amber);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+}
+.first-rx-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.first-rx-explain {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.first-rx-resolved {
+  background: #eaf6f0;
+  border: 1px solid #b6ddc9;
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ---- Zero-prescription state ---- */
+.no-rx-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
 
 /* ---- Prescriptions table ---- */
 .rx-panel {
@@ -407,6 +503,85 @@ body {
   color: #146c4d;
 }
 .dispense-confirm span { color: var(--teal); }
+
+/* ---- Audit & Safety dashboard (Dashboard 2, read-only) ---- */
+.audit-wrap {
+  width: 100%;
+  max-width: 880px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.audit-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.audit-header-row .audit-note { flex: 1; margin: 0; }
+
+.audit-note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  font-style: italic;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.audit-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+}
+.audit-panel h2 { margin: 0 0 14px; font-size: 15px; }
+
+.audit-stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.audit-stat-tile {
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.audit-stat-num {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--blue-deep);
+  font-variant-numeric: tabular-nums;
+}
+.audit-stat-label { margin-top: 2px; font-size: 12px; color: var(--ink-soft); }
+
+.audit-subheading { margin: 0 0 4px; font-size: 13px; }
+.audit-subnote { margin: 0 0 12px; font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; }
+
+.audit-risk-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.audit-badge {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 999px;
+  display: inline-block;
+  white-space: nowrap;
+}
+.audit-badge-risk-HIGH { background: var(--red-tint); color: var(--red-deep); border: 1px solid #f3c3c7; }
+.audit-badge-risk-MEDIUM { background: var(--amber-tint); color: var(--amber); border: 1px solid #e8c07a; }
+.audit-badge-risk-LOW { background: #e8f3ee; color: #146c4d; border: 1px solid #b6ddc9; }
+.audit-badge-risk-NONE { background: var(--canvas); color: var(--ink-soft); border: 1px solid var(--line); }
+.audit-badge-review { background: #eef3f8; color: var(--blue-deep); border: 1px solid #cddcec; }
+
+.audit-table-scroll { overflow-x: auto; }
+.audit-empty { text-align: center; color: var(--ink-soft); padding: 18px; }
 
 @media (max-width: 620px) {
   .app-main { padding: 20px 14px 48px; }

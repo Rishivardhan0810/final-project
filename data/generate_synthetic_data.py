@@ -1,48 +1,43 @@
-# PART OF: Data Pipeline -- Data Generation (the very first step; makes
-# patients.csv and medications.csv that every other script builds on)
+# Part of the data pipeline -- the first step, makes patients.csv and
+# medications.csv that everything downstream builds on.
 """
-Synthetic patient prescription data generator -- v2.
+Generates the synthetic patient/prescription dataset.
 
-WHAT CHANGED FROM v1, AND WHY (supervisor feedback after the meeting):
-
-1. "Categorise them properly" -> every drug now has a therapeutic_class
-   (e.g. Anticoagulant, ACE inhibitor, SSRI) instead of sitting in a flat
-   list with no grouping.
-
-2. "Involve prior medications" -> every patient now has a list of
-   concurrent_medications (0-3 other drugs they're already taking),
-   shown alongside the alert for context, and summarised as a
-   polypharmacy_count feature.
-
-3. "Think like a scientist / behind the science" -> risk is no longer
-   one flat rule for every drug. Each drug is flagged
-   narrow_therapeutic_index (NTI) or not -- a real pharmacology concept:
-   NTI drugs (warfarin, digoxin, levothyroxine, insulin, lithium) have a
-   small gap between an effective dose and a harmful one, so smaller
-   changes matter more. Risk thresholds scale with this, not a single
-   fixed percentage for every drug regardless of what it is.
-
-4. "Focus on formula changes, not companies/packaging" -> drug_changed
-   now means the ACTIVE INGREDIENT changed. A separate
-   formulation_changed flag captures immediate-release vs
-   extended-release swaps of the SAME ingredient (genuinely risk
-   relevant). A separate manufacturer_changed flag captures brand/
-   generic-maker swaps of the identical formula (NOT risk relevant --
-   generated on purpose so the EDA/feature-selection step can PROVE it
-   contributes nothing, rather than just asserting it).
-
-5. "Focus on data patterns / algorithm / analysing" -> the richer
-   feature set (6 features now instead of 4) gives EDA and feature
-   selection more real work to do -- see data/eda.py and
-   data/preprocess.py, which decide what to keep based on evidence.
+A few design choices worth knowing about:
+- Drugs are grouped by therapeutic_class (Anticoagulant, ACE inhibitor,
+  SSRI, etc.) rather than sitting in one flat list.
+- Each patient also gets a handful of concurrent_medications, shown
+  alongside the alert for context and summarised as polypharmacy_count.
+- Risk isn't one flat rule for every drug -- each drug is flagged
+  narrow_therapeutic_index (NTI) or not. NTI drugs (warfarin, digoxin,
+  levothyroxine, insulin, lithium) have a much smaller gap between an
+  effective and a harmful dose, so the risk thresholds scale with that
+  rather than using one fixed percentage for everything.
+- drug_changed only means the active ingredient changed.
+  formulation_changed is its own flag for immediate- vs
+  extended-release swaps of the same drug (this does matter clinically).
+  manufacturer_changed is tracked as a control feature on purpose --
+  it's a packaging/brand swap, not a formula change, and it's meant to
+  show up as not mattering once eda.py looks at it, rather than that
+  just being an assumption.
 """
 
 import csv
+import os
 import random
+import sys
 import uuid
 from datetime import date, timedelta
 
 random.seed(42)
+
+# Resolve the import path from this file's own location rather than the
+# current working directory, so it works whether you run this from
+# inside data/ or from the repo root. comparison_engine.py doesn't touch
+# `random` or do any file I/O on import, so importing it here can't
+# affect the random.seed(42) sequence above.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend"))
+from comparison_engine import classify_risk  # noqa: E402
 
 # --- Reference drug data -----------------------------------------------
 # Each drug: name, therapeutic_class, narrow_therapeutic_index (NTI),
@@ -138,9 +133,7 @@ def gen_patients(n):
 
 def pick_concurrent_medications(index_drug, k):
     """Picks k other drugs (not the index drug) this patient is also
-    currently taking, for polypharmacy context. Used for display and
-    as a summary count feature -- deliberately NOT part of the risk
-    rule, so feature selection can show it doesn't help."""
+    taking, purely for context -- doesn't feed into the risk rule."""
     pool = [d for d in DRUGS if d["name"] != index_drug["name"]]
     k = min(k, len(pool))
     return random.sample(pool, k)
@@ -209,23 +202,16 @@ def make_prescription_pair(patient, drug):
     concurrent = pick_concurrent_medications(drug, random.choice([0, 1, 1, 2, 2, 3]))
     polypharmacy_count = len(concurrent)
 
-    # --- Risk rule v2: thresholds scale with pharmacology, not a flat rule ---
-    if not (drug_changed or formulation_changed or dose_changed or route_changed):
-        risk_label = "NONE"
-    elif drug_changed:
-        risk_label = "HIGH" if narrow_therapeutic_index else "MEDIUM"
-    elif formulation_changed:
-        risk_label = "HIGH" if narrow_therapeutic_index else "MEDIUM"
-    elif dose_changed:
-        threshold = 0.25 if narrow_therapeutic_index else 0.50
-        if abs(dose_pct_change) >= threshold:
-            risk_label = "HIGH"
-        else:
-            risk_label = "MEDIUM" if narrow_therapeutic_index else "LOW"
-    elif route_changed:
-        risk_label = "LOW"
-    else:
-        risk_label = "NONE"
+    # uses the same classify_risk() the live app calls, so the generator
+    # and the app can't quietly end up with different rules
+    risk_label = classify_risk(
+        drug_changed=drug_changed,
+        formulation_changed=formulation_changed,
+        dose_changed=dose_changed,
+        dose_change_pct=dose_pct_change,
+        route_changed=route_changed,
+        narrow_therapeutic_index=narrow_therapeutic_index,
+    )
 
     return {
         "patient_id": patient["patient_id"],
@@ -261,8 +247,8 @@ def make_prescription_pair(patient, drug):
 
 
 def main(per_class=150, out_dir="."):
-    """Quota-sampled generation, same balancing approach as before, now
-    over the richer feature/label set above."""
+    """Keeps sampling until each risk class has exactly `per_class` rows,
+    so the dataset comes out balanced by construction rather than by luck."""
     targets = {"NONE": per_class, "LOW": per_class, "MEDIUM": per_class, "HIGH": per_class}
     counts = {k: 0 for k in targets}
     patients, rows = [], []

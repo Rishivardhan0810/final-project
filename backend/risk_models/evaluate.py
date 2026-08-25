@@ -1,10 +1,8 @@
-# PART OF: Backend -- Risk Models (trains + compares both classifiers
-# side by side; run this to produce the headline accuracy numbers)
-"""
-Runs both classifiers on the identical, pre-split test.csv and prints a
-side-by-side comparison table. Assumes data/preprocess.py has already
-been run (this script does NOT re-split the data).
-"""
+# Part of the backend risk models -- trains + compares both classifiers,
+# run this to get the headline accuracy numbers.
+"""Runs both classifiers on the same pre-split test.csv and prints a
+side-by-side table. Assumes data/preprocess.py has already been run --
+this script doesn't re-split anything itself."""
 import json
 import os
 import sys
@@ -83,15 +81,13 @@ def main():
     print(f"\nSaved -> {out_path}")
 
     print(
-        "\nNOTE: Random Forest hits 100% here because it's given narrow_therapeutic_index "
-        "directly as an input feature -- the risk_label rule branches on that exact flag, so RF "
-        "can shortcut straight to the rule rather than learning anything transferable. The text "
-        "model is NOT given that flag; it only sees drug names in a sentence and has to infer "
-        "which ones are narrow-therapeutic-index (warfarin, digoxin, levothyroxine, etc.) purely "
-        "from language. It gets 94%, not 100%, with its errors concentrated on the HIGH/MEDIUM "
-        "boundary -- exactly where NTI status matters most. That gap is real evidence of "
-        "language-based inference, not just rule-copying. See README.md 'Design notes' for the "
-        "full discussion, and evaluate_real_synthea.py for external validation on genuine data."
+        "\nNote: Random Forest hits 100% here mainly because it's given "
+        "narrow_therapeutic_index directly as a feature -- the risk_label rule branches on "
+        "that exact flag, so RF can shortcut straight to the rule rather than learning "
+        "anything new. The text model doesn't get that flag; it only sees drug names in a "
+        "sentence and has to work out which ones are narrow-therapeutic-index from language "
+        "alone. It scores 94%, not 100%, with most errors on the HIGH/MEDIUM boundary -- "
+        "exactly where NTI status matters. See README.md and evaluate_real_synthea.py for more."
     )
 
 
